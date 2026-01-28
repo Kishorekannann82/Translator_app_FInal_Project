@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/translate-scanned-documents.ts';
+import '@/ai/flows/translate-text-and-preserve-formatting.ts';
+import '@/ai/flows/test-translation-quality-with-sample-text.ts';
