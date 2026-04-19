@@ -90,10 +90,7 @@ interface DocumentTranslatorProps {
 
 export default function DocumentTranslator({ initialText, onClearInitialText }: DocumentTranslatorProps) {
   const [files, setFiles] = useState<FileState[]>([]);
-  const [targetLanguage, setTargetLanguage] = setTargetLanguageState('Hindi');
-  function setTargetLanguageState(lang: SupportedLanguage) {
-      return useState<SupportedLanguage>(lang);
-  }
+  const [targetLanguage, setTargetLanguage] = useState<SupportedLanguage>('Hindi');
   const [isTranslating, startTranslation] = useTransition();
   const [isSpeaking, startSpeaking] = useTransition();
   const [isSummarizing, startSummarizing] = useTransition();
