@@ -3,7 +3,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Bhasha Kavach',
+  title: 'Regional Language Translator',
   description:
     'AI-powered multilingual translation for IPR awareness resources.',
 };
