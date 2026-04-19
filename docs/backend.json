@@ -1,0 +1,307 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user of the Bhasha Kavach application, storing user-specific settings and preferences, separate from authentication credentials.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for identification within the application (not for authentication).",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "preferredUiLanguage": {
+          "type": "string",
+          "description": "The user's preferred language for the application interface (e.g., 'en', 'hi')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "createdAt"
+      ]
+    },
+    "TranslationJob": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TranslationJob",
+      "type": "object",
+      "description": "Represents a single translation request or batch of files initiated by a user, tracking its progress and details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TranslationJob entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who initiated this translation job. (Relationship: UserProfile 1:N TranslationJob)"
+        },
+        "originalFileName": {
+          "type": "string",
+          "description": "The original name of the file or content provided by the user."
+        },
+        "originalFileType": {
+          "type": "string",
+          "description": "The type of the original input file (e.g., 'docx', 'pdf', 'jpg', 'png', 'txt')."
+        },
+        "originalContentStoragePath": {
+          "type": "string",
+          "description": "The URI or path to the stored original content in the backend storage.",
+          "format": "uri"
+        },
+        "inputMethod": {
+          "type": "string",
+          "description": "Describes how the input content was provided (e.g., 'file_upload', 'plain_text_input', 'sample_test_input')."
+        },
+        "sourceLanguage": {
+          "type": "string",
+          "description": "The original language of the input content (e.g., 'en' for English)."
+        },
+        "targetLanguages": {
+          "type": "array",
+          "description": "An array of target languages requested for translation (e.g., ['hi', 'mr', 'bn']).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "The current processing status of the translation job (e.g., 'PENDING', 'PROCESSING_OCR', 'PROCESSING_TRANSLATION', 'COMPLETED', 'FAILED')."
+        },
+        "requestedAt": {
+          "type": "string",
+          "description": "Timestamp when the translation job was initiated.",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the translation job was completed.",
+          "format": "date-time"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Details of any error that occurred during processing, if the status is 'FAILED'."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "originalFileName",
+        "originalFileType",
+        "originalContentStoragePath",
+        "inputMethod",
+        "sourceLanguage",
+        "targetLanguages",
+        "status",
+        "requestedAt"
+      ]
+    },
+    "TranslatedOutput": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TranslatedOutput",
+      "type": "object",
+      "description": "Represents a specific translated version of content generated from a TranslationJob for a particular language and format.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TranslatedOutput entity."
+        },
+        "translationJobId": {
+          "type": "string",
+          "description": "Reference to the TranslationJob that produced this output. (Relationship: TranslationJob 1:N TranslatedOutput)"
+        },
+        "targetLanguage": {
+          "type": "string",
+          "description": "The language of this specific translated output (e.g., 'hi', 'mr')."
+        },
+        "outputFormat": {
+          "type": "string",
+          "description": "The format of this translated output (e.g., 'WORD', 'PDF', 'PLAIN_TEXT', 'PREVIEW_HTML')."
+        },
+        "outputContentStoragePath": {
+          "type": "string",
+          "description": "The URI or path to the stored translated content file or text in the backend storage.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when this translated output was generated.",
+          "format": "date-time"
+        },
+        "wordCount": {
+          "type": "number",
+          "description": "The word count of the translated content."
+        },
+        "characterCount": {
+          "type": "number",
+          "description": "The character count of the translated content."
+        }
+      },
+      "required": [
+        "id",
+        "translationJobId",
+        "targetLanguage",
+        "outputFormat",
+        "outputContentStoragePath",
+        "createdAt"
+      ]
+    },
+    "Summary": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Summary",
+      "type": "object",
+      "description": "Represents a summarized version of a specific TranslatedOutput, generated by the AI-powered summarization feature.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Summary entity."
+        },
+        "translatedOutputId": {
+          "type": "string",
+          "description": "Reference to the TranslatedOutput from which this summary was generated. (Relationship: TranslatedOutput 1:N Summary)"
+        },
+        "summaryText": {
+          "type": "string",
+          "description": "The actual summarized content."
+        },
+        "summaryLengthType": {
+          "type": "string",
+          "description": "Describes the intended length or style of the summary (e.g., 'SHORT', 'MEDIUM', 'LONG', 'CUSTOM')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the summary was generated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "translatedOutputId",
+        "summaryText",
+        "summaryLengthType",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user-specific settings and preferences, owned by the authenticated user. The document ID for each UserProfile is the Firebase Authentication UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/translationJobs/{translationJobId}",
+        "definition": {
+          "entityName": "TranslationJob",
+          "schema": {
+            "$ref": "#/backend/entities/TranslationJob"
+          },
+          "description": "Stores details of a user's initiated translation job. Includes the 'userId' field (as per schema) and is implicitly owned by the user in the path for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this translation job."
+            },
+            {
+              "name": "translationJobId",
+              "description": "The unique identifier for a specific translation job."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/translationJobs/{translationJobId}/translatedOutputs/{translatedOutputId}",
+        "definition": {
+          "entityName": "TranslatedOutput",
+          "schema": {
+            "$ref": "#/backend/entities/TranslatedOutput"
+          },
+          "description": "Stores a specific translated version of content generated from a translation job. Will include a denormalized 'userId' field (derived from the path) in the document for authorization independence, alongside the 'translationJobId' as per schema.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent translation job."
+            },
+            {
+              "name": "translationJobId",
+              "description": "The unique identifier for the parent translation job."
+            },
+            {
+              "name": "translatedOutputId",
+              "description": "The unique identifier for a specific translated output."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/translationJobs/{translationJobId}/translatedOutputs/{translatedOutputId}/summaries/{summaryId}",
+        "definition": {
+          "entityName": "Summary",
+          "schema": {
+            "$ref": "#/backend/entities/Summary"
+          },
+          "description": "Stores a summarized version of a specific translated output. Will include a denormalized 'userId' field (derived from the path) in the document for authorization independence, alongside the 'translatedOutputId' as per schema.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent translated output."
+            },
+            {
+              "name": "translationJobId",
+              "description": "The unique identifier for the parent translation job."
+            },
+            {
+              "name": "translatedOutputId",
+              "description": "The unique identifier for the parent translated output."
+            },
+            {
+              "name": "summaryId",
+              "description": "The unique identifier for a specific summary."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed following a strict hierarchical, user-owned model, ensuring strong data isolation and simplifying security rules. All core entities (`UserProfile`, `TranslationJob`, `TranslatedOutput`, `Summary`) are nested under the authenticated user's path (`/users/{userId}/...`), making user ownership explicit and easily enforceable.\n\n**Authorization Independence (CRITICAL):** This structure explicitly prioritizes authorization independence. Each document within the user's hierarchy (i.e., `TranslationJob`, `TranslatedOutput`, and `Summary`) will include the `userId` (denormalized from the path or the original `UserProfile`'s ID) directly within its document data. This eliminates the need for `get()` operations in security rules to check parent document ownership. For instance, to verify access to a `TranslatedOutput` document, a rule can simply check `request.auth.uid == resource.data.userId` without needing to fetch its parent `TranslationJob` or the grandparent `UserProfile`. This approach is crucial for enabling atomic operations and making rules highly debuggable and performant.\n\n**QAPs (Rules are not Filters):** The hierarchical path combined with denormalized `userId` directly supports Query-Allow-Permissions (QAPs) by ensuring that `list` operations are inherently secure. When a user queries `/users/{request.auth.uid}/translationJobs`, for example, all documents returned by the query will, by virtue of the path, belong to that user. The security rules will then simply validate `request.auth.uid == userId` in the path. There is no need for client-side filtering or server-side `where` clauses on `userId` that rules would then need to validate using non-indexed lookups or complex `get()` calls. This design allows for efficient and secure listing of user-specific data, as all documents in a given collection (e.g., `translationJobs`) for a specific user belong to that user.\n\n**Structural Segregation:** Each collection (`userProfiles`, `translationJobs`, `translatedOutputs`, `summaries`) maintains a homogeneous security posture: all documents within these user-specific subcollections are owned by the `userId` defined in the parent path. This avoids mixing data with different access requirements, further simplifying security rule logic.\n\n**Access Modeling:** The design consistently uses Path-Based ownership (`/users/{userId}/...`) for all user-specific and user-owned data. This is the most secure and straightforward pattern for managing private user data and its related entities.\n\n**Data Clarity and Predictability:** Wildcards like `{userId}`, `{translationJobId}`, `{translatedOutputId}`, and `{summaryId}` are descriptive and semantic, enhancing readability and maintainability of both the data structure and the security rules."
+  }
+}

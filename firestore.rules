@@ -1,0 +1,126 @@
+/**
+ * Bhasha Kavach - Security Rules Logic
+ * 
+ * CORE PHILOSOPHY:
+ * This ruleset implements a strict hierarchical Ownership Model. Data isolation is 
+ * achieved by nesting all user-specific data under a root `/users/{userId}` path. 
+ * Authorization is strictly enforced based on the authenticated user's UID matching 
+ * the path variables.
+ * 
+ * DATA STRUCTURE:
+ * - /users/{userId}: The root profile for a user.
+ * - /users/{userId}/translationJobs/{jobId}: Translation requests initiated by the user.
+ * - /users/{userId}/translationJobs/{jobId}/translatedOutputs/{outputId}: Generated translations.
+ * - /users/{userId}/translationJobs/{jobId}/translatedOutputs/{outputId}/summaries/{summaryId}: AI summaries of outputs.
+ * 
+ * KEY SECURITY DECISIONS:
+ * 1. Path-Based Authorization: All access checks leverage the `{userId}` wildcard in the 
+ *    URL path to verify ownership, which is highly performant and secure.
+ * 2. Relational Integrity: On creation, we enforce that the document's internal 
+ *    relational IDs (e.g., userId, translationJobId) match the path parameters.
+ * 3. Prototyping Flexibility: While authorization is strict, the schema of non-relational 
+ *    content (like summary text or translation status) is not enforced, allowing 
+ *    for rapid front-end iteration.
+ * 4. Immutability: Critical ownership fields are made immutable during updates to 
+ *    prevent documents from being "orphaned" or transferred between users.
+ * 
+ * DENORMALIZATION FOR AUTHORIZATION:
+ * Although the hierarchical path provides strong security, documents include 
+ * denormalized ownership fields (like userId) to support efficient querying 
+ * and clear data provenance.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /**
+     * @description Checks if the user is authenticated with Firebase Auth.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Combines ownership check with a check that the document exists.
+     * Used for update and delete operations to ensure state-change safety.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the UserProfile entity.
+     * @path /users/{userId}
+     * @allow (get) If signed in as the user.
+     * @allow (list) If signed in as the user.
+     * @allow (create) If the new document ID and internal 'id' match the Auth UID.
+     * @allow (update) If the owner and the 'id' field remains unchanged.
+     * @deny If UID mismatch or attempting to change the document ID.
+     * @principle Ownership and Self-Creation.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for the TranslationJob entity.
+       * @path /users/{userId}/translationJobs/{translationJobId}
+       * @allow (create) If internal 'userId' matches the parent path.
+       * @allow (update) If internal 'userId' is not modified.
+       * @principle Relational Integrity and Ownership.
+       */
+      match /translationJobs/{translationJobId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Rules for the TranslatedOutput entity.
+         * @path /users/{userId}/translationJobs/{translationJobId}/translatedOutputs/{translatedOutputId}
+         * @allow (create) If internal 'translationJobId' matches the parent path.
+         * @principle Nested Ownership.
+         */
+        match /translatedOutputs/{translatedOutputId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) && request.resource.data.translationJobId == translationJobId;
+          allow update: if isExistingOwner(userId) && request.resource.data.translationJobId == resource.data.translationJobId;
+          allow delete: if isExistingOwner(userId);
+
+          /**
+           * @description Rules for the Summary entity.
+           * @path /users/{userId}/translationJobs/{translationJobId}/translatedOutputs/{translatedOutputId}/summaries/{summaryId}
+           * @allow (create) If internal 'translatedOutputId' matches the parent path.
+           * @principle Deeply Nested Ownership.
+           */
+          match /summaries/{summaryId} {
+            allow get, list: if isOwner(userId);
+            allow create: if isOwner(userId) && request.resource.data.translatedOutputId == translatedOutputId;
+            allow update: if isExistingOwner(userId) && request.resource.data.translatedOutputId == resource.data.translatedOutputId;
+            allow delete: if isExistingOwner(userId);
+          }
+        }
+      }
+    }
+
+    // --- DEFAULT DENY ---
+    // Explicitly deny any access to paths not defined above.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
