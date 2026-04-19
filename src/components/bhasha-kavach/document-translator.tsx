@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   XCircle,
   Download,
+  Languages,
 } from 'lucide-react';
 import { getFileIcon } from './icons';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
 
 type FileStatus = 'pending' | 'uploading' | 'translating' | 'done' | 'error';
 
@@ -74,6 +76,7 @@ export default function DocumentTranslator() {
     useState<SupportedLanguage>('Hindi');
   const [isTranslating, startTranslation] = useTransition();
   const [isDragging, setIsDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -155,6 +158,9 @@ export default function DocumentTranslator() {
               progress: 100,
               translatedText: result.translatedText,
             });
+            
+            // Auto-expand the first successful result
+            setActiveTab(fileState.id);
 
           } catch (e) {
             const error = e instanceof Error ? e.message : 'An unknown error occurred';
@@ -198,8 +204,9 @@ export default function DocumentTranslator() {
       <CardContent className="space-y-6">
         <div
           className={cn(
-            'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center transition-colors',
-            isDragging ? 'border-primary bg-accent/50' : 'border-border'
+            'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center transition-colors',
+            isDragging ? 'border-primary bg-accent/50' : 'border-border',
+            files.length > 0 ? 'p-6' : 'p-12'
           )}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -207,9 +214,9 @@ export default function DocumentTranslator() {
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <UploadCloud className="mb-4 h-12 w-12 text-muted-foreground" />
+          <UploadCloud className="mb-2 h-10 w-10 text-muted-foreground" />
           <p className="font-semibold text-foreground">
-            Drag & drop files here, or click to select
+            {files.length > 0 ? 'Add more files' : 'Drag & drop files here, or click to select'}
           </p>
           <p className="text-sm text-muted-foreground">
             Supports .docx, .pdf, .png, .jpg, .txt
@@ -226,89 +233,124 @@ export default function DocumentTranslator() {
 
         {files.length > 0 && (
           <div className="space-y-4">
-            <h3 className="font-semibold">Uploaded Files</h3>
-            <div className="max-h-96 space-y-3 overflow-y-auto rounded-md border p-3">
-              {files.map((fileState) => (
-                <div key={fileState.id} className="rounded-md border bg-card p-3 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0">{getFileIcon(fileState.file.name)}</div>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="truncate font-medium">{fileState.file.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(fileState.file.size / 1024).toFixed(2)} KB
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {fileState.status === 'pending' && <span className="text-xs text-muted-foreground">Pending</span>}
-                      {(fileState.status === 'uploading' || fileState.status === 'translating') && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-                      {fileState.status === 'done' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-                      {fileState.status === 'error' && <XCircle className="h-5 w-5 text-destructive" />}
-                    </div>
-                  </div>
-                  {(fileState.status === 'uploading' || fileState.status === 'translating') && (
-                    <Progress value={fileState.progress} className="mt-2 h-2" />
-                  )}
-                  {fileState.status === 'error' && (
-                     <p className="mt-2 text-xs text-destructive">{fileState.error}</p>
-                  )}
-                  {fileState.status === 'done' && fileState.translatedText && (
-                    <Accordion type="single" collapsible className="mt-2 w-full">
-                      <AccordionItem value="item-1">
-                        <AccordionTrigger>Preview Translation</AccordionTrigger>
-                        <AccordionContent>
-                          <div className="mt-2 space-y-4">
-                            <div className="max-h-48 overflow-y-auto rounded-md border bg-background/50 p-3">
-                              <p className="whitespace-pre-wrap text-sm">{fileState.translatedText}</p>
-                            </div>
-                            <div className="flex gap-2">
-                               <Button size="sm" onClick={() => downloadAsFile(fileState.translatedText!, `${fileState.file.name.split('.')[0]}_translated.txt`)}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download (.txt)
-                              </Button>
-                               <Button size="sm" variant="outline" onClick={() => downloadAsFile(fileState.translatedText!, `${fileState.file.name.split('.')[0]}_translated.docx`)}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Word (.docx)
-                              </Button>
-                               <Button size="sm" variant="outline" onClick={() => downloadAsFile(fileState.translatedText!, `${fileState.file.name.split('.')[0]}_translated.pdf`)}>
-                                <Download className="mr-2 h-4 w-4" />
-                                PDF
-                              </Button>
-                            </div>
+            <h3 className="flex items-center gap-2 font-semibold">
+              Files to Process
+              <Badge variant="secondary">{files.length}</Badge>
+            </h3>
+            <div className="max-h-[500px] space-y-3 overflow-y-auto rounded-md border p-4 bg-muted/20">
+              <Accordion type="single" collapsible value={activeTab} onValueChange={setActiveTab} className="w-full space-y-3">
+                {files.map((fileState) => (
+                  <AccordionItem 
+                    key={fileState.id} 
+                    value={fileState.id} 
+                    className={cn(
+                      "rounded-lg border bg-card px-4 shadow-sm transition-all",
+                      fileState.status === 'done' && "border-green-200 bg-green-50/30 dark:bg-green-900/10"
+                    )}
+                  >
+                    <div className="flex items-center gap-4 py-3">
+                      <div className="flex-shrink-0">{getFileIcon(fileState.file.name)}</div>
+                      <div className="flex-1 overflow-hidden">
+                        <p className="truncate font-medium">{fileState.file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(fileState.file.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {fileState.status === 'pending' && <Badge variant="outline" className="font-normal">Pending</Badge>}
+                        {(fileState.status === 'uploading' || fileState.status === 'translating') && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-primary animate-pulse">Translating...</span>
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
                           </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  )}
-                </div>
-              ))}
+                        )}
+                        {fileState.status === 'done' && (
+                          <Badge className="bg-green-500 hover:bg-green-600 gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Done
+                          </Badge>
+                        )}
+                        {fileState.status === 'error' && (
+                          <Badge variant="destructive" className="gap-1">
+                            <XCircle className="h-3 w-3" /> Error
+                          </Badge>
+                        )}
+                        {fileState.status === 'done' && (
+                           <AccordionTrigger className="p-0 hover:no-underline" />
+                        )}
+                      </div>
+                    </div>
+
+                    {(fileState.status === 'uploading' || fileState.status === 'translating') && (
+                      <Progress value={fileState.progress} className="mb-3 h-1" />
+                    )}
+
+                    {fileState.status === 'error' && (
+                       <p className="pb-3 text-xs text-destructive">{fileState.error}</p>
+                    )}
+
+                    <AccordionContent>
+                      <div className="pb-4 pt-2 space-y-4 border-t mt-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
+                             <Languages className="h-4 w-4" />
+                             Translated Content ({targetLanguage})
+                          </h4>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto rounded-md border bg-background p-4 text-sm leading-relaxed shadow-inner">
+                          {fileState.translatedText ? (
+                            <p className="whitespace-pre-wrap">{fileState.translatedText}</p>
+                          ) : (
+                            <p className="italic text-muted-foreground">Processing translation...</p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                           <Button size="sm" onClick={() => downloadAsFile(fileState.translatedText!, `${fileState.file.name.split('.')[0]}_translated.txt`)}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download (.txt)
+                          </Button>
+                           <Button size="sm" variant="outline" onClick={() => downloadAsFile(fileState.translatedText!, `${fileState.file.name.split('.')[0]}_translated.docx`)}>
+                            Download (.docx)
+                          </Button>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Select
-            onValueChange={(value) => setTargetLanguage(value as SupportedLanguage)}
-            defaultValue={targetLanguage}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Select Language" />
-            </SelectTrigger>
-            <SelectContent>
-              {supportedLanguages.map((lang) => (
-                <SelectItem key={lang.value} value={lang.value}>
-                  {lang.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={onTranslate} disabled={isTranslating} className="w-full sm:w-auto">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t pt-6">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">Target Language:</span>
+            <Select
+              onValueChange={(value) => setTargetLanguage(value as SupportedLanguage)}
+              defaultValue={targetLanguage}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {supportedLanguages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={onTranslate} disabled={isTranslating || files.length === 0} className="w-full sm:w-auto h-11 px-8">
             {isTranslating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Translating...
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing Documents...
               </>
             ) : (
-              'Translate All'
+              <>
+                <Languages className="mr-2 h-5 w-5" />
+                Translate All Files
+              </>
             )}
           </Button>
         </div>

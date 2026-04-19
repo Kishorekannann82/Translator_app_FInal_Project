@@ -9,6 +9,9 @@ import {
 import {
   testTranslationQuality,
 } from '@/ai/flows/test-translation-quality-with-sample-text';
+import {
+  translateAudio,
+} from '@/ai/flows/translate-audio';
 import { z } from 'zod';
 import { supportedLanguages } from '@/lib/languages';
 
@@ -67,6 +70,24 @@ export async function handleQualityTest(
   } catch (e) {
     console.error('Quality test failed:', e);
     const message = e instanceof Error ? e.message : 'An unknown error occurred during the quality test.';
+    return { error: message };
+  }
+}
+
+export async function handleAudioTranslation(
+  audioDataUri: string,
+  targetLanguage: string
+): Promise<{ translatedText: string; originalTranscript: string } | { error: string }> {
+  try {
+    const validatedLanguage = LanguageSchema.parse(targetLanguage);
+    const result = await translateAudio({
+      audioDataUri,
+      targetLanguage: validatedLanguage,
+    });
+    return result;
+  } catch (e) {
+    console.error('Audio translation failed:', e);
+    const message = e instanceof Error ? e.message : 'An unknown error occurred during audio processing.';
     return { error: message };
   }
 }
