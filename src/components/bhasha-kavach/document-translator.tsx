@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useTransition } from 'react';
@@ -35,6 +36,7 @@ import {
   Volume2,
   Sparkles,
   FileText,
+  Headphones,
 } from 'lucide-react';
 import { getFileIcon } from './icons';
 import { cn } from '@/lib/utils';
@@ -58,6 +60,7 @@ interface FileState {
   progress: number;
   translatedText: string | null;
   summary: string | null;
+  audioUri: string | null;
   error: string | null;
 }
 
@@ -102,6 +105,7 @@ export default function DocumentTranslator() {
       progress: 0,
       translatedText: null,
       summary: null,
+      audioUri: null,
       error: null,
     }));
     setFiles((prev) => [...prev, ...newFileStates]);
@@ -150,7 +154,6 @@ export default function DocumentTranslator() {
               translatedText: result.translatedText,
             });
             
-            // Save to Firestore History
             if (db && user) {
               const jobsRef = collection(db, 'users', user.uid, 'translationJobs');
               addDocumentNonBlocking(jobsRef, {
@@ -191,13 +194,18 @@ export default function DocumentTranslator() {
     });
   };
 
-  const playTranslation = (text: string) => {
+  const playTranslation = (id: string, text: string) => {
     startSpeaking(async () => {
       const response = await handleTextToSpeech(text);
       if ('error' in response) {
         toast({ title: 'Speech Error', description: response.error, variant: 'destructive' });
       } else {
-        new Audio(response.audioDataUri).play();
+        updateFileState(id, { audioUri: response.audioDataUri });
+        const audio = new Audio(response.audioDataUri);
+        audio.play().catch(e => {
+          console.error('Audio playback failed:', e);
+          toast({ title: 'Playback Error', description: 'Your browser blocked automatic playback. Please click again or download audio.', variant: 'destructive' });
+        });
       }
     });
   };
@@ -213,6 +221,15 @@ export default function DocumentTranslator() {
     document.body.removeChild(link);
   };
 
+  const downloadAudio = (dataUri: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = dataUri;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Card className="shadow-lg border-primary/10">
       <CardHeader>
@@ -221,7 +238,7 @@ export default function DocumentTranslator() {
             <CardTitle>Professional Document Translator</CardTitle>
             <CardDescription>Upload assets for high-fidelity regional conversion.</CardDescription>
           </div>
-          <Badge variant="outline" className="h-fit">v2.0 AI Powered</Badge>
+          <Badge variant="outline" className="h-fit">v2.1 AI Voice Enabled</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -305,16 +322,38 @@ export default function DocumentTranslator() {
                               <h4 className="text-sm font-bold text-primary flex items-center gap-2">
                                 <Languages className="h-4 w-4" /> Translated Text
                               </h4>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 gap-2 border-primary/20 hover:bg-primary/5" 
-                                onClick={() => playTranslation(fileState.translatedText!)}
-                                disabled={isSpeaking}
-                              >
-                                {isSpeaking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                                Listen
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 gap-2 border-primary/20 hover:bg-primary/5" 
+                                  onClick={() => playTranslation(fileState.id, fileState.translatedText!)}
+                                  disabled={isSpeaking}
+                                >
+                                  {isSpeaking ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      Voice...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Volume2 className="h-3 w-3" />
+                                      Listen
+                                    </>
+                                  )}
+                                </Button>
+                                {fileState.audioUri && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 gap-2 text-primary"
+                                    onClick={() => downloadAudio(fileState.audioUri!, `${fileState.file.name.split('.')[0]}_audio.wav`)}
+                                  >
+                                    <Headphones className="h-3 w-3" />
+                                    Download Audio
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                             <div className="max-h-60 overflow-y-auto rounded-lg border bg-white p-4 text-sm leading-relaxed shadow-sm">
                                <p className="whitespace-pre-wrap">{fileState.translatedText}</p>
@@ -353,7 +392,7 @@ export default function DocumentTranslator() {
 
                         <div className="flex flex-wrap gap-3 pt-4 border-t">
                            <Button className="gap-2" onClick={() => downloadAsFile(fileState.translatedText!, `${fileState.file.name.split('.')[0]}_translated.txt`)}>
-                            <Download className="h-4 w-4" /> Download Result
+                            <Download className="h-4 w-4" /> Download Text Result
                           </Button>
                         </div>
                       </div>
