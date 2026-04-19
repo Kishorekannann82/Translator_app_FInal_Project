@@ -1,4 +1,3 @@
-
 'use server';
 
 import {
@@ -16,6 +15,9 @@ import {
 import {
   textToSpeech,
 } from '@/ai/flows/text-to-speech';
+import {
+  summarizeText,
+} from '@/ai/flows/summarize-text';
 import { z } from 'zod';
 import { supportedLanguages } from '@/lib/languages';
 
@@ -103,6 +105,17 @@ export async function handleTextToSpeech(text: string): Promise<{ audioDataUri: 
   } catch (e) {
     console.error('TTS failed:', e);
     const message = e instanceof Error ? e.message : 'An unknown error occurred during speech generation.';
+    return { error: message };
+  }
+}
+
+export async function handleSummarize(text: string): Promise<{ summary: string } | { error: string }> {
+  try {
+    const result = await summarizeText({ text, lengthType: 'MEDIUM' });
+    return result;
+  } catch (e) {
+    console.error('Summarization failed:', e);
+    const message = e instanceof Error ? e.message : 'An unknown error occurred during summarization.';
     return { error: message };
   }
 }

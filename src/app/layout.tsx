@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Regional Language Translator',
   description:
-    'AI-powered multilingual translation for IPR awareness resources.',
+    'AI-powered multilingual translation for professional and educational resources.',
 };
 
 export default function RootLayout({
@@ -24,8 +25,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        {children}
-        <Toaster />
+        <FirebaseClientProvider>
+          {children}
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
