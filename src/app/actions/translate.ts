@@ -1,3 +1,4 @@
+
 'use server';
 
 import {
@@ -12,6 +13,9 @@ import {
 import {
   translateAudio,
 } from '@/ai/flows/translate-audio';
+import {
+  textToSpeech,
+} from '@/ai/flows/text-to-speech';
 import { z } from 'zod';
 import { supportedLanguages } from '@/lib/languages';
 
@@ -88,6 +92,17 @@ export async function handleAudioTranslation(
   } catch (e) {
     console.error('Audio translation failed:', e);
     const message = e instanceof Error ? e.message : 'An unknown error occurred during audio processing.';
+    return { error: message };
+  }
+}
+
+export async function handleTextToSpeech(text: string): Promise<{ audioDataUri: string } | { error: string }> {
+  try {
+    const result = await textToSpeech({ text });
+    return result;
+  } catch (e) {
+    console.error('TTS failed:', e);
+    const message = e instanceof Error ? e.message : 'An unknown error occurred during speech generation.';
     return { error: message };
   }
 }

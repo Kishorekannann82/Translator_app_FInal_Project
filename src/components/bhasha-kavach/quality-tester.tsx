@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useTransition } from 'react';
@@ -19,9 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { handleQualityTest } from '@/app/actions/translate';
+import { handleQualityTest, handleTextToSpeech } from '@/app/actions/translate';
 import { supportedLanguages, type SupportedLanguage } from '@/lib/languages';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function QualityTester() {
@@ -32,6 +33,7 @@ export default function QualityTester() {
   const [targetLanguage, setTargetLanguage] =
     useState<SupportedLanguage>('Hindi');
   const [isTesting, startTesting] = useTransition();
+  const [isSpeaking, startSpeaking] = useTransition();
   const { toast } = useToast();
 
   const onTestQuality = () => {
@@ -59,6 +61,24 @@ export default function QualityTester() {
     });
   };
 
+  const playTranslation = () => {
+    if (!translatedText || translatedText.startsWith('Error:')) return;
+
+    startSpeaking(async () => {
+      const response = await handleTextToSpeech(translatedText);
+      if ('error' in response) {
+        toast({
+          title: 'Speech Error',
+          description: response.error,
+          variant: 'destructive',
+        });
+      } else {
+        const audio = new Audio(response.audioDataUri);
+        audio.play();
+      }
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -81,7 +101,21 @@ export default function QualityTester() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="translated-text">Translated Text</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="translated-text">Translated Text</Label>
+              {translatedText && !translatedText.startsWith('Error:') && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 gap-2 text-primary" 
+                  onClick={playTranslation}
+                  disabled={isSpeaking}
+                >
+                  {isSpeaking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                  Listen
+                </Button>
+              )}
+            </div>
             <Textarea
               id="translated-text"
               placeholder="Translation will appear here..."

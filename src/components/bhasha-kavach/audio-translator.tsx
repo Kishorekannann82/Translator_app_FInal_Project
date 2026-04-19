@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useTransition } from 'react';
@@ -7,7 +8,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supportedLanguages, type SupportedLanguage } from '@/lib/languages';
-import { handleAudioTranslation } from '@/app/actions/translate';
+import { handleAudioTranslation, handleTextToSpeech } from '@/app/actions/translate';
 import { Mic, Square, Loader2, RotateCcw, Volume2, Languages } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ export default function AudioTranslator() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [targetLanguage, setTargetLanguage] = useState<SupportedLanguage>('Hindi');
   const [isTranslating, startTranslation] = useTransition();
+  const [isSpeaking, startSpeaking] = useTransition();
   const [result, setResult] = useState<{
     translatedText: string;
     originalTranscript: string;
@@ -112,6 +113,24 @@ export default function AudioTranslator() {
     });
   };
 
+  const playTranslation = () => {
+    if (!result?.translatedText) return;
+
+    startSpeaking(async () => {
+      const response = await handleTextToSpeech(result.translatedText);
+      if ('error' in response) {
+        toast({
+          title: 'Speech Error',
+          description: response.error,
+          variant: 'destructive',
+        });
+      } else {
+        const audio = new Audio(response.audioDataUri);
+        audio.play();
+      }
+    });
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -191,7 +210,18 @@ export default function AudioTranslator() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-primary uppercase tracking-wider">Translated Text</h4>
-                <Badge>{targetLanguage}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge>{targetLanguage}</Badge>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-primary" 
+                    onClick={playTranslation}
+                    disabled={isSpeaking}
+                  >
+                    {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm font-medium leading-relaxed shadow-sm">
                 {result.translatedText}

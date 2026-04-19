@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useTransition } from 'react';
@@ -22,6 +23,7 @@ import { supportedLanguages, type SupportedLanguage } from '@/lib/languages';
 import {
   handleTextTranslation,
   handleDocumentTranslation,
+  handleTextToSpeech,
 } from '@/app/actions/translate';
 import {
   UploadCloud,
@@ -30,6 +32,7 @@ import {
   XCircle,
   Download,
   Languages,
+  Volume2,
 } from 'lucide-react';
 import { getFileIcon } from './icons';
 import { cn } from '@/lib/utils';
@@ -75,6 +78,7 @@ export default function DocumentTranslator() {
   const [targetLanguage, setTargetLanguage] =
     useState<SupportedLanguage>('Hindi');
   const [isTranslating, startTranslation] = useTransition();
+  const [isSpeaking, startSpeaking] = useTransition();
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const { toast } = useToast();
@@ -159,7 +163,6 @@ export default function DocumentTranslator() {
               translatedText: result.translatedText,
             });
             
-            // Auto-expand the first successful result
             setActiveTab(fileState.id);
 
           } catch (e) {
@@ -178,6 +181,22 @@ export default function DocumentTranslator() {
         title: 'Translation Complete',
         description: 'All pending files have been processed.',
       });
+    });
+  };
+
+  const playTranslation = (text: string) => {
+    startSpeaking(async () => {
+      const response = await handleTextToSpeech(text);
+      if ('error' in response) {
+        toast({
+          title: 'Speech Error',
+          description: response.error,
+          variant: 'destructive',
+        });
+      } else {
+        const audio = new Audio(response.audioDataUri);
+        audio.play();
+      }
     });
   };
 
@@ -295,6 +314,16 @@ export default function DocumentTranslator() {
                              <Languages className="h-4 w-4" />
                              Translated Content ({targetLanguage})
                           </h4>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 gap-2" 
+                            onClick={() => playTranslation(fileState.translatedText!)}
+                            disabled={isSpeaking || !fileState.translatedText}
+                          >
+                            {isSpeaking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                            Listen
+                          </Button>
                         </div>
                         <div className="max-h-60 overflow-y-auto rounded-md border bg-background p-4 text-sm leading-relaxed shadow-inner">
                           {fileState.translatedText ? (
