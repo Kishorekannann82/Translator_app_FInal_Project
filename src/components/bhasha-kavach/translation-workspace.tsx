@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,42 +6,65 @@ import DocumentTranslator from './document-translator';
 import QualityTester from './quality-tester';
 import AudioTranslator from './audio-translator';
 import HistoryList from './history-list';
-import { FileText, TestTube2, Mic, History } from 'lucide-react';
+import { FileText, TestTube2, Mic, History, LayoutDashboard } from 'lucide-react';
 
 export default function TranslationWorkspace() {
   return (
     <div className="w-full max-w-6xl">
       <Tabs defaultValue="translate" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 shadow-sm border border-slate-200/50">
-          <TabsTrigger value="translate" className="rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-white gap-2">
-            <FileText className="h-4 w-4" />
+        <TabsList className="grid w-full grid-cols-4 h-16 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-900 shadow-lg border border-slate-200/50">
+          <TabsTrigger 
+            value="translate" 
+            className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-white gap-3 text-sm font-bold transition-all hover:bg-white/50"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-data-[state=active]:bg-primary group-data-[state=active]:text-white">
+              <FileText className="h-5 w-5" />
+            </div>
             <span className="hidden sm:inline">Documents</span>
           </TabsTrigger>
-          <TabsTrigger value="audio" className="rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-white gap-2">
-            <Mic className="h-4 w-4" />
+          <TabsTrigger 
+            value="audio" 
+            className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-white gap-3 text-sm font-bold transition-all hover:bg-white/50"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
+              <Mic className="h-5 w-5" />
+            </div>
             <span className="hidden sm:inline">Voice</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-white gap-2">
-            <History className="h-4 w-4" />
+          <TabsTrigger 
+            value="history" 
+            className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-white gap-3 text-sm font-bold transition-all hover:bg-white/50"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 text-slate-700">
+              <History className="h-5 w-5" />
+            </div>
             <span className="hidden sm:inline">History</span>
           </TabsTrigger>
-          <TabsTrigger value="test" className="rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-white gap-2">
-            <TestTube2 className="h-4 w-4" />
+          <TabsTrigger 
+            value="test" 
+            className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-white gap-3 text-sm font-bold transition-all hover:bg-white/50"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+              <TestTube2 className="h-5 w-5" />
+            </div>
             <span className="hidden sm:inline">Tester</span>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="translate" className="mt-8 transition-all duration-300">
-          <DocumentTranslator />
-        </TabsContent>
-        <TabsContent value="audio" className="mt-8 transition-all duration-300">
-          <AudioTranslator />
-        </TabsContent>
-        <TabsContent value="history" className="mt-8 transition-all duration-300">
-          <HistoryList />
-        </TabsContent>
-        <TabsContent value="test" className="mt-8 transition-all duration-300">
-          <QualityTester />
-        </TabsContent>
+
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <TabsContent value="translate" className="m-0">
+            <DocumentTranslator />
+          </TabsContent>
+          <TabsContent value="audio" className="m-0">
+            <AudioTranslator />
+          </TabsContent>
+          <TabsContent value="history" className="m-0">
+            <HistoryList />
+          </TabsContent>
+          <TabsContent value="test" className="m-0">
+            <QualityTester />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

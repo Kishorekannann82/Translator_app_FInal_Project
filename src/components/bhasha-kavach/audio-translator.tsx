@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supportedLanguages, type SupportedLanguage } from '@/lib/languages';
-import { handleAudioTranslation, handleTextToSpeech } from '@/app/actions/translate';
-import { Mic, Square, Loader2, RotateCcw, Volume2, Languages } from 'lucide-react';
+import { handleAudioTranslation, handleTextToSpeech, handleSummarize } from '@/app/actions/translate';
+import { Mic, Square, Loader2, RotateCcw, Volume2, Languages, Sparkles, Download, FileAudio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -31,9 +31,11 @@ export default function AudioTranslator() {
   const [targetLanguage, setTargetLanguage] = useState<SupportedLanguage>('Hindi');
   const [isTranslating, startTranslation] = useTransition();
   const [isSpeaking, startSpeaking] = useTransition();
+  const [isSummarizing, startSummarizing] = useTransition();
   const [result, setResult] = useState<{
     translatedText: string;
     originalTranscript: string;
+    summary?: string;
   } | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -113,6 +115,19 @@ export default function AudioTranslator() {
     });
   };
 
+  const onSummarize = () => {
+    if (!result?.translatedText) return;
+    startSummarizing(async () => {
+      const response = await handleSummarize(result.translatedText);
+      if ('error' in response) {
+        toast({ title: 'Summarization failed', description: response.error, variant: 'destructive' });
+      } else {
+        setResult(prev => prev ? { ...prev, summary: response.summary } : null);
+        toast({ title: 'Summary Generated', description: 'AI has summarized the voice translation.' });
+      }
+    });
+  };
+
   const playTranslation = () => {
     if (!result?.translatedText) return;
 
@@ -131,139 +146,191 @@ export default function AudioTranslator() {
     });
   };
 
+  const downloadResult = () => {
+    if (!result) return;
+    const content = `Original Transcript:\n${result.originalTranscript}\n\nTranslated (${targetLanguage}):\n${result.translatedText}\n\nSummary:\n${result.summary || 'N/A'}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `voice_translation_${targetLanguage}.txt`;
+    a.click();
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mic className="h-5 w-5 text-primary" />
-          Audio Translation
-        </CardTitle>
-        <CardDescription>
-          Record your speech in English to get an instant translation in your target language.
-        </CardDescription>
+    <Card className="w-full border-accent/20 shadow-xl">
+      <CardHeader className="bg-accent/5 pb-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <FileAudio className="h-6 w-6 text-accent" />
+              Voice Translation Studio
+            </CardTitle>
+            <CardDescription>
+              Multimodal AI transcribes English speech and converts it to your chosen regional dialect.
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="border-accent/30 text-accent">Real-time Audio</Badge>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border bg-muted/30 p-8">
+      <CardContent className="space-y-8 pt-8">
+        <div className="flex flex-col items-center justify-center space-y-6 rounded-2xl border-2 border-dashed border-accent/20 bg-accent/5 p-12">
           <div
             className={cn(
-              'flex h-24 w-24 items-center justify-center rounded-full transition-all duration-300',
+              'flex h-28 w-28 items-center justify-center rounded-full transition-all duration-500 shadow-lg',
               isRecording
-                ? 'animate-pulse bg-destructive shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+                ? 'animate-pulse bg-destructive shadow-destructive/50 ring-8 ring-destructive/20'
                 : audioBlob
-                ? 'bg-green-100 dark:bg-green-900/30'
-                : 'bg-primary/10'
+                ? 'bg-green-500 shadow-green-200'
+                : 'bg-accent shadow-accent/30'
             )}
           >
             {isRecording ? (
-              <Square className="h-10 w-10 text-white" />
+              <Square className="h-10 w-10 text-white fill-white" />
             ) : (
-              <Mic className={cn('h-10 w-10', audioBlob ? 'text-green-600' : 'text-primary')} />
+              <Mic className="h-10 w-10 text-white" />
             )}
           </div>
 
-          <div className="text-center">
-            <p className="font-medium">
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-bold">
               {isRecording
-                ? 'Recording... Speak now'
+                ? 'Listening to your speech...'
                 : audioBlob
-                ? 'Recording Complete'
-                : 'Ready to record'}
+                ? 'Audio Ready for Translation'
+                : 'Ready to Record'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {isRecording ? 'Click the red button to stop' : 'Press start and speak clearly in English'}
             </p>
             {audioUrl && (
-              <audio src={audioUrl} controls className="mt-4 h-10 w-full max-w-xs" />
+              <audio src={audioUrl} controls className="mt-4 h-11 w-full max-w-sm rounded-full bg-white shadow-sm" />
             )}
           </div>
 
           <div className="flex gap-4">
             {!isRecording && !audioBlob && (
-              <Button onClick={startRecording} size="lg" className="rounded-full px-8">
-                <Mic className="mr-2 h-5 w-5" />
+              <Button onClick={startRecording} size="lg" className="rounded-full px-10 h-14 text-lg font-bold shadow-lg shadow-accent/20">
+                <Mic className="mr-3 h-6 w-6" />
                 Start Recording
               </Button>
             )}
             {isRecording && (
-              <Button onClick={stopRecording} variant="destructive" size="lg" className="rounded-full px-8">
-                <Square className="mr-2 h-5 w-5" />
-                Stop Recording
+              <Button onClick={stopRecording} variant="destructive" size="lg" className="rounded-full px-10 h-14 text-lg font-bold shadow-lg shadow-destructive/20">
+                <Square className="mr-3 h-5 w-5 fill-current" />
+                Stop
               </Button>
             )}
             {audioBlob && !isTranslating && (
-              <Button onClick={resetRecording} variant="outline" size="lg" className="rounded-full px-8">
-                <RotateCcw className="mr-2 h-5 w-5" />
-                Reset
+              <Button onClick={resetRecording} variant="outline" size="lg" className="rounded-full px-10 h-14 font-bold border-accent/20 hover:bg-accent/5">
+                <RotateCcw className="mr-3 h-5 w-5" />
+                Discard & Retry
               </Button>
             )}
           </div>
         </div>
 
         {result && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Original Transcript</h4>
-                <Badge variant="outline">English</Badge>
-              </div>
-              <div className="rounded-lg border bg-background p-4 text-sm leading-relaxed shadow-sm">
-                {result.originalTranscript}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-primary uppercase tracking-wider">Translated Text</h4>
-                <div className="flex items-center gap-2">
-                  <Badge>{targetLanguage}</Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-primary" 
-                    onClick={playTranslation}
-                    disabled={isSpeaking}
-                  >
-                    {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-                  </Button>
+          <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Original English</h4>
+                  <Badge variant="secondary">Transcript</Badge>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-5 text-sm leading-relaxed shadow-sm min-h-[120px]">
+                  {result.originalTranscript}
                 </div>
               </div>
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm font-medium leading-relaxed shadow-sm">
-                {result.translatedText}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h4 className="text-sm font-bold text-accent uppercase tracking-wider">Regional Translation</h4>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-accent">{targetLanguage}</Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-accent hover:bg-accent/10" 
+                      onClick={playTranslation}
+                      disabled={isSpeaking}
+                    >
+                      {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-xl border-2 border-accent/20 bg-white p-5 text-sm font-medium leading-relaxed shadow-sm min-h-[120px]">
+                  {result.translatedText}
+                </div>
               </div>
+            </div>
+
+            {result.summary && (
+              <div className="rounded-xl border border-orange-200 bg-orange-50/30 p-5 space-y-2">
+                <h4 className="flex items-center gap-2 text-sm font-bold text-orange-700 uppercase">
+                  <Sparkles className="h-4 w-4" /> AI Key Insights
+                </h4>
+                <p className="text-sm italic text-slate-700 leading-relaxed">{result.summary}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 pt-4 border-t">
+               {!result.summary && (
+                  <Button 
+                    variant="secondary" 
+                    className="gap-2"
+                    onClick={onSummarize}
+                    disabled={isSummarizing}
+                  >
+                    {isSummarizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    Summarize Output
+                  </Button>
+               )}
+               <Button variant="outline" className="gap-2 border-slate-200" onClick={downloadResult}>
+                <Download className="h-4 w-4" /> Export Report
+              </Button>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-             <span className="text-sm font-medium">Target Language:</span>
-             <Select
-                onValueChange={(value) => setTargetLanguage(value as SupportedLanguage)}
-                defaultValue={targetLanguage}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select Language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {supportedLanguages.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="flex flex-col gap-5 border-t pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
+               <Languages className="h-6 w-6" />
+             </div>
+             <div className="flex flex-col">
+               <span className="text-xs font-bold text-muted-foreground uppercase">Target Language</span>
+               <Select
+                  onValueChange={(value) => setTargetLanguage(value as SupportedLanguage)}
+                  defaultValue={targetLanguage}
+                >
+                  <SelectTrigger className="w-[200px] font-semibold border-accent/20">
+                    <SelectValue placeholder="Select Language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supportedLanguages.map((lang) => (
+                      <SelectItem key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+             </div>
           </div>
           
           <Button 
             onClick={translateAudio} 
             disabled={!audioBlob || isTranslating || isRecording}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto h-14 px-12 rounded-xl text-lg font-bold shadow-lg shadow-accent/20 bg-accent hover:bg-accent/90"
           >
             {isTranslating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
+                <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                Analyzing Speech...
               </>
             ) : (
               <>
-                <Languages className="mr-2 h-4 w-4" />
-                Translate Recording
+                <Languages className="mr-3 h-6 w-6" />
+                Translate Now
               </>
             )}
           </Button>
