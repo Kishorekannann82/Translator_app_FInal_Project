@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -30,13 +29,13 @@ import {
   UploadCloud,
   Loader2,
   CheckCircle2,
-  XCircle,
   Download,
   Languages,
   Volume2,
   Sparkles,
   FileText,
   Headphones,
+  RotateCcw,
 } from 'lucide-react';
 import { getFileIcon } from './icons';
 import { cn } from '@/lib/utils';
@@ -48,20 +47,22 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type FileStatus = 'pending' | 'uploading' | 'translating' | 'done' | 'error';
 
 interface FileState {
   id: string;
-  file: File;
+  file: File | { name: string; size: number; type: string };
   status: FileStatus;
   progress: number;
   translatedText: string | null;
   summary: string | null;
   audioUri: string | null;
   error: string | null;
+  isCustomText?: boolean;
+  content?: string;
 }
 
 const readFileAsDataURL = (file: File): Promise<string> => {
@@ -82,9 +83,17 @@ const readFileAsText = (file: File): Promise<string> => {
   });
 };
 
-export default function DocumentTranslator() {
+interface DocumentTranslatorProps {
+  initialText?: string;
+  onClearInitialText?: () => void;
+}
+
+export default function DocumentTranslator({ initialText, onClearInitialText }: DocumentTranslatorProps) {
   const [files, setFiles] = useState<FileState[]>([]);
-  const [targetLanguage, setTargetLanguage] = useState<SupportedLanguage>('Hindi');
+  const [targetLanguage, setTargetLanguage] = setTargetLanguageState('Hindi');
+  function setTargetLanguageState(lang: SupportedLanguage) {
+      return useState<SupportedLanguage>(lang);
+  }
   const [isTranslating, startTranslation] = useTransition();
   const [isSpeaking, startSpeaking] = useTransition();
   const [isSummarizing, startSummarizing] = useTransition();
@@ -95,6 +104,26 @@ export default function DocumentTranslator() {
   const db = useFirestore();
   const { user } = useUser();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialText) {
+      const newId = `repo-${Date.now()}`;
+      setFiles([{
+        id: newId,
+        file: { name: 'Repository Resource', size: initialText.length, type: 'text/plain' },
+        status: 'pending',
+        progress: 0,
+        translatedText: null,
+        summary: null,
+        audioUri: null,
+        error: null,
+        isCustomText: true,
+        content: initialText
+      }]);
+      setActiveTab(newId);
+      onClearInitialText?.();
+    }
+  }, [initialText, onClearInitialText]);
 
   const handleFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
@@ -121,7 +150,7 @@ export default function DocumentTranslator() {
     if (files.length === 0) {
       toast({
         title: 'No files selected',
-        description: 'Please upload at least one document.',
+        description: 'Please upload at least one document or select a resource.',
         variant: 'destructive',
       });
       return;
@@ -133,17 +162,23 @@ export default function DocumentTranslator() {
         .map(async (fileState) => {
           try {
             updateFileState(fileState.id, { status: 'uploading', progress: 25 });
-            const fileType = fileState.file.type;
             let result: { translatedText: string } | { error: string };
 
-            if (fileType.startsWith('text/') || fileState.file.name.endsWith('.txt')) {
-              const text = await readFileAsText(fileState.file);
+            if (fileState.isCustomText && fileState.content) {
               updateFileState(fileState.id, { status: 'translating', progress: 50 });
-              result = await handleTextTranslation(text, targetLanguage);
+              result = await handleTextTranslation(fileState.content, targetLanguage);
             } else {
-              const dataUrl = await readFileAsDataURL(fileState.file);
-              updateFileState(fileState.id, { status: 'translating', progress: 50 });
-              result = await handleDocumentTranslation(dataUrl, targetLanguage);
+              const file = fileState.file as File;
+              const fileType = file.type;
+              if (fileType.startsWith('text/') || file.name.endsWith('.txt')) {
+                const text = await readFileAsText(file);
+                updateFileState(fileState.id, { status: 'translating', progress: 50 });
+                result = await handleTextTranslation(text, targetLanguage);
+              } else {
+                const dataUrl = await readFileAsDataURL(file);
+                updateFileState(fileState.id, { status: 'translating', progress: 50 });
+                result = await handleDocumentTranslation(dataUrl, targetLanguage);
+              }
             }
 
             if ('error' in result) throw new Error(result.error);
@@ -160,7 +195,7 @@ export default function DocumentTranslator() {
                 userId: user.uid,
                 originalFileName: fileState.file.name,
                 originalFileType: fileState.file.type,
-                inputMethod: 'file_upload',
+                inputMethod: fileState.isCustomText ? 'repository_input' : 'file_upload',
                 sourceLanguage: 'English',
                 targetLanguages: [targetLanguage],
                 status: 'COMPLETED',
@@ -204,7 +239,7 @@ export default function DocumentTranslator() {
         const audio = new Audio(response.audioDataUri);
         audio.play().catch(e => {
           console.error('Audio playback failed:', e);
-          toast({ title: 'Playback Error', description: 'Your browser blocked automatic playback. Please click again or download audio.', variant: 'destructive' });
+          toast({ title: 'Playback Error', description: 'Your browser blocked automatic playback.', variant: 'destructive' });
         });
       }
     });
@@ -230,13 +265,18 @@ export default function DocumentTranslator() {
     document.body.removeChild(link);
   };
 
+  const clearQueue = () => {
+    setFiles([]);
+    setActiveTab(undefined);
+  };
+
   return (
     <Card className="shadow-lg border-primary/10">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Professional Document Translator</CardTitle>
-            <CardDescription>Upload assets for high-fidelity regional conversion.</CardDescription>
+            <CardDescription>Upload assets or use resources for high-fidelity regional conversion.</CardDescription>
           </div>
           <Badge variant="outline" className="h-fit">v2.1 AI Voice Enabled</Badge>
         </div>
@@ -273,11 +313,17 @@ export default function DocumentTranslator() {
 
         {files.length > 0 && (
           <div className="space-y-4">
-            <h3 className="flex items-center gap-2 font-bold text-slate-700">
-              <FileText className="h-4 w-4" />
-              Processing Queue
-              <Badge variant="secondary" className="ml-1">{files.length}</Badge>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 font-bold text-slate-700">
+                <FileText className="h-4 w-4" />
+                Processing Queue
+                <Badge variant="secondary" className="ml-1">{files.length}</Badge>
+              </h3>
+              <Button variant="ghost" size="sm" onClick={clearQueue} className="text-xs text-muted-foreground hover:text-destructive h-8 gap-2">
+                <RotateCcw className="h-3 w-3" />
+                Clear Queue
+              </Button>
+            </div>
             <div className="max-h-[600px] space-y-3 overflow-y-auto rounded-xl border bg-slate-50/50 p-4 shadow-inner">
               <Accordion type="single" collapsible value={activeTab} onValueChange={setActiveTab} className="w-full space-y-3">
                 {files.map((fileState) => (
