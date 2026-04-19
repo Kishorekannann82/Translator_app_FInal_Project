@@ -282,7 +282,7 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
         <div
           className={cn(
             'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 text-center transition-all duration-200 cursor-pointer',
-            isDragging ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50',
+            isDragging ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900',
             files.length > 0 ? 'p-6' : 'p-12'
           )}
           onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -311,7 +311,7 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
         {files.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-2 font-bold text-slate-700">
+              <h3 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
                 <FileText className="h-4 w-4" />
                 Processing Queue
                 <Badge variant="secondary" className="ml-1">{files.length}</Badge>
@@ -321,7 +321,7 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
                 Clear Queue
               </Button>
             </div>
-            <div className="max-h-[600px] space-y-3 overflow-y-auto rounded-xl border bg-slate-50/50 p-4 shadow-inner">
+            <div className="max-h-[600px] space-y-3 overflow-y-auto rounded-xl border bg-slate-50/50 dark:bg-slate-900/20 p-4 shadow-inner">
               <Accordion type="single" collapsible value={activeTab} onValueChange={setActiveTab} className="w-full space-y-3">
                 {files.map((fileState) => (
                   <AccordionItem 
@@ -329,7 +329,7 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
                     value={fileState.id} 
                     className={cn(
                       "rounded-xl border bg-card px-5 shadow-sm transition-all overflow-hidden",
-                      fileState.status === 'done' && "border-green-200 bg-green-50/20"
+                      fileState.status === 'done' && "border-green-200 dark:border-green-900/50 bg-green-50/20 dark:bg-green-900/10"
                     )}
                   >
                     <div className="flex items-center gap-4 py-4">
@@ -340,7 +340,7 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
                       </div>
                       <div className="flex items-center gap-3">
                         {fileState.status === 'done' && (
-                          <Badge className="bg-green-500 hover:bg-green-600 gap-1.5 py-1">
+                          <Badge className="bg-green-500 hover:bg-green-600 gap-1.5 py-1 text-white">
                             <CheckCircle2 className="h-3.5 w-3.5" /> Complete
                           </Badge>
                         )}
@@ -375,12 +375,12 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
                                 >
                                   {isSpeaking ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                       Voice...
                                     </>
                                   ) : (
                                     <>
-                                      <Volume2 className="h-3 w-3" />
+                                      <Volume2 className="h-3.5 w-3.5" />
                                       Listen
                                     </>
                                   )}
@@ -392,14 +392,14 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
                                     className="h-8 gap-2 text-primary"
                                     onClick={() => downloadAudio(fileState.audioUri!, `${fileState.file.name.split('.')[0]}_audio.wav`)}
                                   >
-                                    <Headphones className="h-3 w-3" />
+                                    <Headphones className="h-3.5 w-3.5" />
                                     Download Audio
                                   </Button>
                                 )}
                               </div>
                             </div>
-                            <div className="max-h-60 overflow-y-auto rounded-lg border bg-white p-4 text-sm leading-relaxed shadow-sm">
-                               <p className="whitespace-pre-wrap">{fileState.translatedText}</p>
+                            <div className="max-h-60 overflow-y-auto rounded-lg border bg-slate-50 dark:bg-slate-900/50 p-4 text-sm leading-relaxed shadow-sm">
+                               <p className="whitespace-pre-wrap text-foreground">{fileState.translatedText}</p>
                             </div>
                           </div>
 
@@ -416,14 +416,14 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
                                   onClick={() => onSummarize(fileState.id, fileState.translatedText!)}
                                   disabled={isSummarizing}
                                 >
-                                  {isSummarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                  {isSummarizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                                   Summarize
                                 </Button>
                               )}
                             </div>
-                            <div className="max-h-60 min-h-[100px] overflow-y-auto rounded-lg border border-accent/20 bg-accent/5 p-4 text-sm leading-relaxed shadow-sm">
+                            <div className="max-h-60 min-h-[100px] overflow-y-auto rounded-lg border border-accent/20 bg-accent/5 dark:bg-accent/10 p-4 text-sm leading-relaxed shadow-sm">
                               {fileState.summary ? (
-                                <p className="italic text-slate-700">{fileState.summary}</p>
+                                <p className="italic text-foreground/90">{fileState.summary}</p>
                               ) : (
                                 <p className="text-muted-foreground italic flex items-center gap-2 h-full justify-center">
                                   Click "Summarize" for AI insights.
@@ -449,7 +449,7 @@ export default function DocumentTranslator({ initialText, onClearInitialText }: 
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t pt-6">
           <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-slate-600">Target Region:</span>
+            <span className="text-sm font-semibold text-muted-foreground">Target Region:</span>
             <Select onValueChange={(v) => setTargetLanguage(v as SupportedLanguage)} defaultValue={targetLanguage}>
               <SelectTrigger className="w-full sm:w-[220px] rounded-lg h-11 border-primary/20">
                 <SelectValue placeholder="Language" />

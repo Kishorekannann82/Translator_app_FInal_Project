@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useTransition } from 'react';
@@ -174,14 +173,14 @@ export default function AudioTranslator() {
         </div>
       </CardHeader>
       <CardContent className="space-y-8 pt-8">
-        <div className="flex flex-col items-center justify-center space-y-6 rounded-2xl border-2 border-dashed border-accent/20 bg-accent/5 p-12">
+        <div className="flex flex-col items-center justify-center space-y-6 rounded-2xl border-2 border-dashed border-accent/20 bg-accent/5 p-12 dark:border-accent/30 dark:bg-accent/10">
           <div
             className={cn(
               'flex h-28 w-28 items-center justify-center rounded-full transition-all duration-500 shadow-lg',
               isRecording
                 ? 'animate-pulse bg-destructive shadow-destructive/50 ring-8 ring-destructive/20'
                 : audioBlob
-                ? 'bg-green-500 shadow-green-200'
+                ? 'bg-green-500 shadow-green-200 dark:shadow-green-900/20'
                 : 'bg-accent shadow-accent/30'
             )}
           >
@@ -204,7 +203,7 @@ export default function AudioTranslator() {
               {isRecording ? 'Click the red button to stop' : 'Press start and speak clearly in English'}
             </p>
             {audioUrl && (
-              <audio src={audioUrl} controls className="mt-4 h-11 w-full max-w-sm rounded-full bg-white shadow-sm" />
+              <audio src={audioUrl} controls className="mt-4 h-11 w-full max-w-sm rounded-full bg-white dark:bg-slate-800 shadow-sm" />
             )}
           </div>
 
@@ -238,7 +237,7 @@ export default function AudioTranslator() {
                   <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Original English</h4>
                   <Badge variant="secondary">Transcript</Badge>
                 </div>
-                <div className="rounded-xl border bg-slate-50 p-5 text-sm leading-relaxed shadow-sm min-h-[120px]">
+                <div className="rounded-xl border bg-slate-50 dark:bg-slate-900/50 p-5 text-sm leading-relaxed shadow-sm min-h-[120px] text-foreground">
                   {result.originalTranscript}
                 </div>
               </div>
@@ -258,18 +257,18 @@ export default function AudioTranslator() {
                     </Button>
                   </div>
                 </div>
-                <div className="rounded-xl border-2 border-accent/20 bg-white p-5 text-sm font-medium leading-relaxed shadow-sm min-h-[120px]">
+                <div className="rounded-xl border-2 border-accent/20 bg-slate-50 dark:bg-slate-900/80 p-5 text-sm font-medium leading-relaxed shadow-sm min-h-[120px] text-foreground">
                   {result.translatedText}
                 </div>
               </div>
             </div>
 
             {result.summary && (
-              <div className="rounded-xl border border-orange-200 bg-orange-50/30 p-5 space-y-2">
-                <h4 className="flex items-center gap-2 text-sm font-bold text-orange-700 uppercase">
+              <div className="rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/30 dark:bg-orange-950/20 p-5 space-y-2">
+                <h4 className="flex items-center gap-2 text-sm font-bold text-orange-700 dark:text-orange-400 uppercase">
                   <Sparkles className="h-4 w-4" /> AI Key Insights
                 </h4>
-                <p className="text-sm italic text-slate-700 leading-relaxed">{result.summary}</p>
+                <p className="text-sm italic text-foreground/90 leading-relaxed">{result.summary}</p>
               </div>
             )}
 
@@ -285,7 +284,7 @@ export default function AudioTranslator() {
                     Summarize Output
                   </Button>
                )}
-               <Button variant="outline" className="gap-2 border-slate-200" onClick={downloadResult}>
+               <Button variant="outline" className="gap-2 border-slate-200 dark:border-slate-800" onClick={downloadResult}>
                 <Download className="h-4 w-4" /> Export Report
               </Button>
             </div>
